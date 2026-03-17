@@ -50,7 +50,7 @@ void changeState(enum RoverState newState){ // newState is just another instance
 
 void setup() {
 
-  serial_fd = open("/dev/pts/8", O_RDWR | O_NOCTTY | O_NDELAY); // opens the serial port for reading and writing, non-blocking, and no controlling terminal
+  serial_fd = open("/dev/pts/2", O_RDWR | O_NOCTTY | O_NDELAY); // opens the serial port for reading and writing, non-blocking, and no controlling terminal
   if (serial_fd == -1){
     printf("Error: Could not open virtual serial port. \n");
   } else {

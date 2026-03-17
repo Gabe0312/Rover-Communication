@@ -16,6 +16,9 @@ unsigned long lastPrintTime = 0;
 
 const unsigned long printInterval = 2500; // how often to print the remaining time in milliseconds, in this case every second
 
+int motor_speed = 
+int joystick = analo
+
 
 void changeState(enum RoverState newState){ // newState is just another instance for the rover state in function that is used in this function to change the state
   currentState = newState;

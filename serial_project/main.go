@@ -1,58 +1,54 @@
-// package main 
+package main
 
-// import (
-// 	"bufio"
-// 	"fmt"
-// 	"log"
-// 	"os"
-// 	"os/signal"
-// 	"syscall"
-// 	"time"
+import (
+	"bufio"
+	"fmt"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-// 	"go.bug.st/serial"
+	"go.bug.st/serial"
+)
 
-// )
+func main() {
+	mode := &serial.Mode{
+		BaudRate: 9600,
+	}
 
-// func main() {
+	piSerialPort, err := serial.Open("/dev/serial0", mode)
 
-// 	mode := &serial.Mode{BaudRate: 9600,}
+	if err != nil {
+		log.Fatal(err)
+	}
 
-// 	piSerialPort, err := serial.Open("/dev/serial0", mode)
+	defer piSerialPort.Close()
 
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
+	c := make(chan os.Signal, 1)
 
-// 	defer piSerialPort.Close()
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-// 	c := make(chan os.Signal, 1)
+	go func() {
+		<-c
+		piSerialPort.Close()
+		fmt.Println("\nReceived interrupt signal, exiting...")
+		os.Exit(0)
+	}()
 
-// 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	scanner := bufio.NewScanner(piSerialPort)
 
-// 	go func() {
-// 		<-c		
-// 		piSerialPort.Close()
-// 		fmt.Println("\nReceived interrupt signal, exiting...")
-// 		os.Exit(0)
-// 	}()
+	for {
 
-// 	scanner := bufio.NewScanner(piSerialPort)
+		if scanner.Scan() {
+			dataRead := scanner.Text()
+			fmt.Println("Data received:", dataRead)
+		}
 
-// 	for{
+		if err := scanner.Err(); err != nil {
+			log.Println("Error reading from serial port:", err)
+		}
 
-// 		if scanner.Scan() {
-// 			dataRead := scanner.Text()
-// 			fmt.Println("Data received:", dataRead)
-// 		}
-
-// 		if err := scanner.Err(); err != nil {
-// 			log.Println("Error reading from serial port:", err)
-// 		}
-
-// 		time.Sleep(100 * time.Millisecond)
-// 	}
-
-
-
-// }
-//
+		time.Sleep(100 * time.Millisecond)
+	}
+}

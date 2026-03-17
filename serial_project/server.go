@@ -398,12 +398,12 @@ func main() {
 
 const MaxPacketSize = 1024
 
-func VerifyPacket(buf []byte) ([]byte, bool){
+func VerifyPacket(buf []byte) ([]byte, bool) {
 	if len(buf) > 4 {
 		return buf[:len(buf)-4], true
 	}
 	return buf, true
 }
-func AppendCRC(data []byte) []byte{
+func AppendCRC(data []byte) []byte {
 	return data
 }
