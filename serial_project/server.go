@@ -34,13 +34,19 @@ type ControllerState struct {
 	Timestamp    int64 `json:"ts"`
 }
 
-// handleClient processes client connection
-func handleClient(conn net.Conn) {
+// handleClient processes client connection and forwards validated JSON to C.
+func handleClient(conn net.Conn, cBridgeAddr string) {
 	defer conn.Close()
 
 	log.Printf("Client connected: %s", conn.RemoteAddr())
 
 	lastPrint := time.Now()
+	var cConn net.Conn
+	defer func() {
+		if cConn != nil {
+			cConn.Close()
+		}
+	}()
 
 	for {
 		// Read 4-byte length prefix
@@ -92,13 +98,29 @@ func handleClient(conn net.Conn) {
 			lastPrint = time.Now()
 		}
 
-		// TODO: Forward validated JSON to C gatekeeper process
+		if cConn == nil {
+			bridge, err := net.DialTimeout("tcp", cBridgeAddr, 500*time.Millisecond)
+			if err != nil {
+				log.Printf("C bridge unavailable at %s: %v", cBridgeAddr, err)
+				continue
+			}
+			cConn = bridge
+			log.Printf("Connected to C bridge at %s", cBridgeAddr)
+		}
+
+		if _, err := cConn.Write(append(payload, '\n')); err != nil {
+			log.Printf("C bridge write failed: %v", err)
+			cConn.Close()
+			cConn = nil
+			continue
+		}
 	}
 }
 
 func main() {
 	port := flag.Int("port", 8080, "Server port")
 	public := flag.Bool("public", false, "Allow external connections")
+	cBridgeAddr := flag.String("c-bridge-addr", "127.0.0.1:9091", "Local C gatekeeper TCP input address")
 	flag.Parse()
 
 	// Setup listener
@@ -123,7 +145,7 @@ func main() {
 			continue
 		}
 
-		go handleClient(conn)
+		go handleClient(conn, *cBridgeAddr)
 	}
 }
 

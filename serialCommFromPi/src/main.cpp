@@ -1,71 +1,57 @@
 #include <Arduino.h>
 
-// put function declarations here:
 #include <stdint.h>
 #include <stdio.h>
 
-enum RoverState{
-  IDLE,//0
-  TELEOP, //1
-  AUTO//2
-}; // think of enum as describing ints with names EX: RED = 0
+enum RoverState {
+  IDLE,
+  TELEOP,
+  AUTO
+};
 
-int currentState = IDLE;// the enum object creation, system will start in IDLE state in the setup() stage
+int currentState = IDLE;
 unsigned long stateStartTime = 0;
 unsigned long lastPrintTime = 0;
 
-const unsigned long printInterval = 2500; // how often to print the remaining time in milliseconds, in this case every second
+const unsigned long printInterval = 2500;
 
-int motor_speed = 
-int joystick = analo
-
-
-void changeState(enum RoverState newState){ // newState is just another instance for the rover state in function that is used in this function to change the state
+void changeState(enum RoverState newState) {
   currentState = newState;
   stateStartTime = millis();
-  lastPrintTime = millis(); // millis returns the number of milliseconds since the board began running the current program, stores it in stateStartTime so we know when state was entered/started so we can do countdowns based on that time.
+  lastPrintTime = millis();
 
-  switch (currentState){
+  switch (currentState) {
     case IDLE:
       Serial.println("IDLE");
       break;
     case TELEOP:
-
+      Serial.println("TELEOP");
       break;
     case AUTO:
-
+      Serial.println("AUTO");
       break;
   }
-} 
+}
 
 void setup() {
-
   Serial.begin(9600);
-
   pinMode(13, OUTPUT);
-
-  
-  
 }
 
 void loop() {
-  unsigned long now = millis(); //how long the program has been running minus the time when the state started which atp is 0 with stateStartTime updated every time the state changes.
-  
-  if (Serial.available() > 0){
+  unsigned long now = millis();
 
-    byte peakedByte = Serial.peek();
+  if (Serial.available() >= 6) {
+    byte startByte = Serial.peek();
 
-    if(peakedByte == 0xA8){
-      
-      if(Serial.available() >= 6){
-        
-        Serial.read();
-        
-        byte payload[5];
-        Serial.readBytes(payload, 5);
+    if (startByte == 0xA8) {
+      byte packet[6];
+      size_t readCount = Serial.readBytes(packet, 6);
 
-
-      if ((payload[4] & 0x1F) == 0x15){
+      if (readCount == 6 && ((packet[5] & 0x1F) == 0x15)) {
+        if (currentState != TELEOP) {
+          changeState(TELEOP);
+        }
 
         Serial.println("Valid packet received from Pi!");
 
@@ -74,34 +60,29 @@ void loop() {
         digitalWrite(13, LOW);
 
         Serial.print("Raw Data: ");
-        Serial.print(payload[0]);
+        Serial.print(packet[1]);
         Serial.print(", ");
-        Serial.print(payload[1]);
+        Serial.print(packet[2]);
         Serial.print(", ");
-        Serial.print(payload[2]);
+        Serial.print(packet[3]);
         Serial.print(", ");
-        Serial.println(payload[3]);
+        Serial.println(packet[4]);
       }
+    } else {
+      // Drop one byte and resync to next potential packet boundary.
+      Serial.read();
     }
-  } else {
-
-    Serial.read();
-
   }
 
-}
-  switch(currentState){
+  switch (currentState) {
     case IDLE:
-      if (now - lastPrintTime >= printInterval){
-          lastPrintTime = now;
+      if (now - lastPrintTime >= printInterval) {
+        lastPrintTime = now;
       }
       break;
-
     case TELEOP:
       break;
-
     case AUTO:
       break;
-
   }
 }
